@@ -42,7 +42,7 @@ class Background:
         game.screen.blit(self.img_render, self.rect)
 
 class Messages:
-    def __init__(self, coords, size, text, text_font, color = 'black'):
+    def __init__(self, coords, size, text, text_font, color = 'black', set_timeout = False):
         self.coords = coords
         self.size = size
         self.text = text
@@ -52,6 +52,21 @@ class Messages:
         
         self.rect = pygame.Rect(self.coords[0], self.coords[1], self.size[0], self.size[1])
 
+        self.set_timeout = set_timeout
+        self.timeout = 0
+
     def draw(self, game):
-        self.text_render = self.text_font.render(self.text, True, self.color)
-        game.screen.blit(self.text_render, self.rect)
+        # Make message disappear after set frames
+        if not self.text or self.text != self.previous_text:
+            self.timeout = 200
+            self.previous_text = self.text
+        if self.timeout == 0:
+            self.text = ''
+
+        if self.timeout > 0:
+            self.text_render = self.text_font.render(self.text, True, self.color)
+            game.screen.blit(self.text_render, self.rect)
+        
+        if self.set_timeout:
+            self.timeout -= 1                
+            

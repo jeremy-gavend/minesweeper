@@ -42,7 +42,7 @@ class Game:
             "difficult": Buttons((self.screen_size[0]/2-50, self.screen_size[1]/4-15), (100,30), "DIFFICULT", self.font_buttons, "red")
         }
         
-        self.info_message = Messages((10, 50), (100, 30), "", self.font_messages)
+        self.info_message = Messages((10, 50), (100, 30), "", self.font_messages, set_timeout=True)
 
         ## Game screen
         self.header_messages = {
@@ -302,7 +302,6 @@ class Game:
                                     break
                                 self.reveal_next_tile(button, index_row, index_button)
                                 
-
             if self.game_state == "end":
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if self.back_button.rect.collidepoint(event.pos):
