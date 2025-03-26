@@ -24,9 +24,6 @@ class Tiles(Buttons):
         if self.active:
             game.screen.blit(self.text_render, self.rect)
         
-
-    
-
 class Background:
     def __init__(self, coords, img_link):
         self.coords = coords
@@ -54,6 +51,8 @@ class Messages:
 
         self.set_timeout = set_timeout
         self.timeout = 0
+        self.previous_text = ''
+
 
     def draw(self, game):
         # Make message disappear after set frames

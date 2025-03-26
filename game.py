@@ -89,6 +89,8 @@ class Game:
             self.timer += 1
 
     def difficulty(self, index):
+        self.info_message.text = f"Changed difficulty to {index}"
+        
         match index:
             case "easy": 
                 return 10, 10, 10
@@ -97,9 +99,6 @@ class Game:
             case "difficult":
                 return 20, 20, 99
             
-        self.info_message.text = f"Changed difficulty to {index}"
-        print(self.info_message.text)
-
     def game_init(self):
         self.mine_placed = False
         self.timer = 0
@@ -230,7 +229,7 @@ class Game:
 
     def game_screen(self):
         # Draw all the header messages (timer and bombs)
-        self.grid_background.draw(self, (self.screen_size[0]-10, self.screen_size[1]-100))
+        # self.grid_background.draw(self, (self.screen_size[0]-10, self.screen_size[1]-100))
 
         for index, message in self.header_messages.items():
             match index:
