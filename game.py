@@ -8,9 +8,11 @@ class Game:
         self.running = True
         self.game_state = "start"
         self.timer = 0
+        self.counter = 0
         self.tiles_remaining = 0
         self.result = ""
-        self.tile_size = 20
+        self.tile_size = 40
+        self.number_colors = ["gray", "blue", "green", "yellow", "orange", "red", "magenta", "indigo", "black"]
 
         # Variables for launching the game
         self.grid_height = 0
@@ -26,28 +28,28 @@ class Game:
         self.screen_size = (1200,900)
         self.screen = pygame.display.set_mode(self.screen_size) 
 
-        self.font_buttons = pygame.font.Font(None, 27)
-        self.font_numbers = pygame.font.Font(None, 18)
-        self.font_messages = pygame.font.Font(None, 27)
+        self.font_buttons = pygame.font.Font(None, 36)
+        self.font_numbers = pygame.font.Font(None, 20)
+        self.font_messages = pygame.font.Font(None, 36)
 
         pygame.display.set_caption("Touhou Sweeper")
 
         # UI Elements
         ## Start screen
-        self.start_button = Buttons((self.screen_size[0]/2+9, self.screen_size[1]/2+9), (100,30), "START", self.font_buttons)
+        self.start_button = Buttons(self.font_buttons, coords=((self.screen_size[0]/2)-150, (self.screen_size[1]/2)-45), size=(300,90), text="START")
 
         self.difficulty_buttons = {
-            "easy": Buttons((self.screen_size[0]/4-50, self.screen_size[1]/4-15), (100,30), "EASY", self.font_buttons, "green"),
-            "normal": Buttons((self.screen_size[0]/3-50, self.screen_size[1]/4-15), (100,30), "NORMAL", self.font_buttons),
-            "difficult": Buttons((self.screen_size[0]/2-50, self.screen_size[1]/4-15), (100,30), "DIFFICULT", self.font_buttons, "red")
+            "easy": Buttons(self.font_buttons, coords=(200, self.screen_size[1]-50), size=(150,45), text="EASY", text_color ="green"),
+            "normal": Buttons(self.font_buttons, coords=(400, self.screen_size[1]-50), size=(150,45), text="NORMAL"),
+            "difficult": Buttons(self.font_buttons, coords=(600, self.screen_size[1]-50), size=(150,45), text="DIFFICULT", text_color="red")
         }
         
-        self.info_message = Messages((10, 50), (100, 30), "", self.font_messages, set_timeout=True)
+        self.info_message = Messages((100, 30), self.font_messages, set_timeout=True, coords=(10, 50), text='')
 
         ## Game screen
         self.header_messages = {
-            "timer": Messages((10, 50), (100, 30), "", self.font_messages),
-            "mines": Messages((self.screen_size[0]-100, 50), (100, 30), "", self.font_messages)
+            "timer": Messages((100, 30), self.font_messages, coords=(10, 50)),
+            "mines": Messages((100, 30), self.font_messages)
         }
 
         self.grid_background = Background((10,100), "./RectangleSettings.png")
@@ -55,11 +57,11 @@ class Game:
         self.tiles_buttons = []        
 
         ## End screen
-        self.back_button = Buttons((self.screen_size[0]/2-50, self.screen_size[1]/2-15), (100,30), "BACK", self.font_buttons,)
+        self.back_button = Buttons(self.font_buttons, text="BACK", size=(100,30))
 
         self.end_message = {
-            "result": Messages((self.screen_size[0]/3-50, self.screen_size[1]/2-15), (100, 30), "", self.font_messages),
-            "end_timer": Messages((10, 50), (100, 30), f"TIME: ", self.font_messages)
+            "result": Messages((100, 30), self.font_messages),
+            "end_timer": Messages((10, 50), self.font_messages, coords=(self.screen_size[0]/3-50, 30+self.screen_size[1]/2-15), text=f"TIME: ")
         }       
 
     def start(self):
@@ -76,16 +78,17 @@ class Game:
                     self.end_screen()
 
             self.clock.tick(60)
-
+            self.counter += 1
             pygame.display.flip()
 
     def check_tiles_remaining(self):
+        print(f"Remaining:{self.tiles_remaining}")
         if not self.tiles_remaining:
             self.result = "win"
             self.game_state = "end"
 
     def timer_tick(self):
-        if self.clock.get_fps() % 60 == 0:
+        if self.counter % 60 == 0:
             self.timer += 1
 
     def difficulty(self, index):
@@ -119,103 +122,73 @@ class Game:
         for i in range(self.grid_height):
             row = []
             for j in range(self.grid_width):
-                row.append(Tiles((10,100), (self.tile_size, self.tile_size), "0", self.font_numbers))
+                row.append(Tiles(self.font_numbers, coords=(self.screen_size[0]/4+(self.tile_size+1)*j,100+(self.tile_size+1)*i), size=(self.tile_size, self.tile_size), text="0"))
+            grid.append(row)
         return grid
 
     def place_mines(self, first_tile_coord):
-        random_coords = []
+        random_coords = set([])
 
         while len(random_coords) < self.total_mines:
             for i in range(self.total_mines - len(random_coords)):
-                x = random.randint(0, self.grid_height)
-                y = random.randint(0, self.grid_width)
-                random_coords.append((x,y))
-
-                # Remove duplicates
-                random_coords = set(random_coords)
+                x = random.randint(0, self.grid_height-1)
+                y = random.randint(0, self.grid_width-1)
 
                 # Remove a bomb in the tile played, if any
                 try:
+                    random_coords.add((x,y))
                     random_coords.remove(first_tile_coord)
                 except:
                     continue
+        print(random_coords)
 
         for coords in random_coords:
             self.grid[coords[0]][coords[1]] = 9
 
-    def show_numbers(self):
+    def set_numbers(self):
         for index_row, row in enumerate(self.grid):
             for index_tile, tile in enumerate(row):
                 if tile == 9:
                     continue
                 
                 number = 0
-                for offset_y in range(-1,1):
-                    for offset_x in range(-1,1):
+                for offset_y in range(-1,2):
+                    for offset_x in range(-1,2):
+                        if index_row + offset_y < 0 or index_tile + offset_x < 0:
+                            continue
+                        print(f"y={index_row + offset_y}, x={index_tile + offset_x}")
                         try: # From top left to bottom right, row by row
                             if self.grid[index_row + offset_y][index_tile + offset_x] == 9:
                                 number += 1
                         except:
-                            print("Tile is out of bound, skipping")
+                            print("Numbers: Tile is out of bound, skipping")
                             continue
-                row[index_tile] = number
+                self.grid[index_row][index_tile] = number
 
-
-                # try:    # Up
-                #     if row[index_tile - 1] == 9:
-                #         number += 1
-                # except:
-                #     print("Tile is out of bound, skipping")
-                # try: # Down
-                #     if row[index_tile + 1] == 9:
-                #         number += 1
-                # except:
-                #     print("Tile is out of bound, skipping")
-                # try: # Left
-                #     if self.grid[index_row - 1] == 9:
-                #         number += 1
-                # except:
-                #     print("Tile is out of bound, skipping")
-                # try: # Right
-                #     if self.grid[index_row + 1] == 9:
-                #         number += 1
-                # except:
-                #     print("Tile is out of bound, skipping")
-                # try: # Up-left
-                #     if self.grid[index_row - 1][index_tile - 1] == 9:
-                #         number += 1
-                # except:
-                #     print("Tile is out of bound, skipping")
-                # try: # Up-right
-                #     if self.grid[index_row - 1][index_tile + 1] == 9:
-                #         number += 1
-                # except:
-                #     print("Tile is out of bound, skipping")
-                # try: # Down-left
-                #     if self.grid[index_row + 1][index_tile - 1] == 9:
-                #         number += 1
-                # except:
-                #     print("Tile is out of bound, skipping")
-                # try: # Down-right
-                #     if self.grid[index_row + 1][index_tile + 1] == 9:
-                #         number += 1
-                # except:
-                #     print("Tile is out of bound, skipping")
+    def show_numbers(self):
+        for index_y, rows in enumerate(self.tiles_buttons):
+            for index_x, button in enumerate(rows):
+                button.text = str(self.grid[index_y][index_x])
+                for i in range(9):
+                    if button.text == str(i):
+                        button.text_color = self.number_colors[i]
                 
     def reveal_next_tile(self, button, index_row, index_button):
-        button.visible = True
-        self.tiles_remaining -= 1
-        self.check_tiles_remaining()
-        if button.text == "0":                
-            for offset_y in range(-1,1):
-                for offset_x in range(-1,1):
-                    new_index_row = index_row + offset_y
-                    new_index_button = index_button + offset_x
-                    try: # From top left to bottom right, row by row
-                        self.reveal_next_tile(self.grid[new_index_row][new_index_button])
-                    except:
-                        print("Tile is out of bound, skipping")
-                        continue
+        if not button.state:
+            button.state = "visible"
+            self.tiles_remaining -= 1
+            if button.text == "0":
+                for offset_y in range(-1,2):
+                    for offset_x in range(-1,2):
+                        if index_row + offset_y < 0 or index_button + offset_x < 0:
+                            continue
+                        new_index_row = index_row + offset_y
+                        new_index_button = index_button + offset_x
+                        try: # From top left to bottom right, row by row                        
+                            self.reveal_next_tile(self.tiles_buttons[new_index_row][new_index_button], new_index_row, new_index_button)
+                        except IndexError:
+                            print("Reveal: Tile is out of bound, skipping")
+                            continue
 
     def start_screen(self):
         # Draw "START" button
@@ -229,16 +202,18 @@ class Game:
 
     def game_screen(self):
         # Draw all the header messages (timer and bombs)
-        # self.grid_background.draw(self, (self.screen_size[0]-10, self.screen_size[1]-100))
+        self.grid_background.draw(self, (self.screen_size[0]-10, self.screen_size[1]-100))
 
         for index, message in self.header_messages.items():
             match index:
                 case "timer":
-                    message.text = f"TIMER: {self.timer}"
-                case 'mines':
-                    message.text = f"MINES: {self.total_mines}"
+                    message.draw(self, text = f"TIMER: {self.timer}")
+                case "mines":
+                    message.draw(self, coords=(self.screen_size[0]-150, 50), text = f"MINES: {self.total_mines}")
 
             message.draw(self)
+        
+        self.back_button.draw(self, coords=(self.screen_size[0]/2-50, 10))
 
         # Display the playable grid
         for row in self.tiles_buttons:
@@ -249,6 +224,9 @@ class Game:
         
     def end_screen(self):
         #Still display the grid, but is not interactable
+        
+        self.back_button.draw(self, coords=(self.screen_size[0]/2-50, 10))
+
         for row in self.tiles_buttons:
             for tile in row:
                 tile.draw(self)
@@ -257,12 +235,11 @@ class Game:
             match index:
                 case "result":
                     if self.result == "win":
-                        message.text = "YOU WIN! Congrats. Heh."
+                        message.draw(self, coords=(self.screen_size[0]/3-50, self.screen_size[1]/2-15), text="YOU WIN! Congrats. Heh.")
                     else:
-                        message.text = "YOU LOSE! You're so bad. Ha!"
+                        message.draw(self, coords=(self.screen_size[0]/3-50, self.screen_size[1]/2-15), text="YOU LOSE! You're so bad. Ha!")
                 case "end_timer":
-                    message.text = f"FINAL TIME: {self.timer}"
-            message.draw(self)
+                    message.draw(self, text=f"FINAL TIME: {self.timer}")
 
     def event(self):
          for event in pygame.event.get():
@@ -274,36 +251,50 @@ class Game:
                     if self.start_button.rect.collidepoint(event.pos):                
                         self.game_init()
                         self.grid = self.create_grid()
+                        self.screen_size = (310 + (self.tile_size+1) * self.grid_width, 110 + (self.tile_size+1) * self.grid_height)
                         self.tiles_buttons = self.create_tiles()
-                        self.screen_size = (300 + self.tile_size * self.grid_width, 100 + self.tile_size * self.grid_height)
                         self.screen = pygame.display.set_mode(self.screen_size)
                         self.game_state = "game"
                     for index, button in self.difficulty_buttons.items():
                         if button.rect.collidepoint(event.pos):
                             self.grid_height, self.grid_width, self.total_mines = self.difficulty(index)
                             
-            if self.game_state == "game":
+            elif self.game_state == "game":
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     for index_row, rows in enumerate(self.tiles_buttons):
                         for index_button, button in enumerate(rows):
-                            if self.start_button.rect.collidepoint(event.pos):
-                                if not self.mine_placed:
-                                    self.place_mines(button.coords)
-                                    for rows in self.tiles_buttons:
-                                        for button in rows:
-                                            button.text = str(self.grid[button.coords[0]][button.coords[1]])
-                                    self.mine_placed = True
-                                if button.text == "9":
-                                    # TODO add visible effect without self.visible
-                                    self.visible = True
-                                    self.game_state = "end"
-                                    self.result = "lose"
-                                    break
-                                self.reveal_next_tile(button, index_row, index_button)
-                                
-            if self.game_state == "end":
+                            if button.rect.collidepoint(event.pos):
+                                if event.button == 1:
+                                    if not button.state:
+                                        if not self.mine_placed:
+                                            self.place_mines((index_button, index_row))
+                                            self.set_numbers()
+                                            self.show_numbers()
+                                            self.mine_placed = True
+                                        if button.text == "9":
+                                            # TODO add visible effect without self.visible (for bomb image)
+                                            button.state = "visible"
+                                            self.game_state = "end"
+                                            self.result = "lose"
+                                            break
+                                        self.reveal_next_tile(button, index_row, index_button)
+                                        self.check_tiles_remaining()
+                                if event.button == 3:
+                                    match button.state:
+                                        case None:
+                                            button.state = "flag"
+                                        case "flag":
+                                            button.state = "?"
+                                        case "?":
+                                            button.state = None
+                    if self.back_button.rect.collidepoint(event.pos):
+                        self.screen = pygame.display.set_mode((1200, 900))
+                        self.game_state = "start"
+                        
+            elif self.game_state == "end":
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if self.back_button.rect.collidepoint(event.pos):
+                        self.screen = pygame.display.set_mode((1200, 900))
                         self.game_state = "start"
 
     # TODO add background in button
